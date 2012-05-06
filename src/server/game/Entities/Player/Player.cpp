@@ -862,6 +862,8 @@ Player::Player(WorldSession* session): Unit(true), m_achievementMgr(this), m_rep
     m_SeasonalQuestChanged = false;
 
     SetPendingBind(0, 0);
+
+    IsInCustomTown = false;
 }
 
 Player::~Player()
@@ -7511,6 +7513,8 @@ void Player::UpdateArea(uint32 newArea)
     pvpInfo.inFFAPvPArea = area && (area->flags & AREA_FLAG_ARENA);
     UpdatePvPState(true);
 
+    IsInCustomTown = false;
+    
     UpdateAreaDependentAuras(newArea);
 
     // previously this was in UpdateZone (but after UpdateArea) so nothing will break

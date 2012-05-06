@@ -287,6 +287,7 @@ class WorldSession
         void SendTrainerList(uint64 guid);
         void SendTrainerList(uint64 guid, const std::string& strTitle);
         void SendListInventory(uint64 guid);
+        void SendListInventoryAdvanced(uint64 vendorGuid, uint32 group_id);
         void SendShowBank(uint64 guid);
         void SendTabardVendorActivate(uint64 guid);
         void SendSpiritResurrect();

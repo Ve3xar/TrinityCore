@@ -700,6 +700,14 @@ void Battleground::RewardReputationToTeam(uint32 faction_id, uint32 Reputation, 
                 player->GetReputationMgr().ModifyReputation(factionEntry, Reputation);
 }
 
+void Battleground::RewardQuestToTeam(uint32 quest_id, uint32 TeamID)
+{
+    for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+        if (Player* player = _GetPlayerForTeam(TeamID, itr, "RewardQuestToTeam"))
+           if (player->IsActiveQuest(quest_id))
+               player->CompleteQuest(quest_id);
+}
+
 void Battleground::UpdateWorldState(uint32 Field, uint32 Value)
 {
     WorldPacket data;
@@ -730,6 +738,7 @@ void Battleground::EndBattleground(uint32 winner)
     int32  winner_matchmaker_change = 0;
     WorldPacket data;
     int32 winmsg_id = 0;
+    bool wintraders;
 
     if (winner == ALLIANCE)
     {
@@ -761,9 +770,10 @@ void Battleground::EndBattleground(uint32 winner)
     {
         winner_arena_team = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(winner));
         loser_arena_team = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeam(winner)));
+        wintraders = isWintrading(GetArenaTeamIdForTeam(winner), GetArenaTeamIdForTeam(GetOtherTeam(winner)));
         if (winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
         {
-            if (winner != WINNER_NONE)
+            if (winner != WINNER_NONE && !wintraders)
             {
                 loser_team_rating = loser_arena_team->GetRating();
                 loser_matchmaker_rating = GetArenaMatchmakerRating(GetOtherTeam(winner));
@@ -786,10 +796,20 @@ void Battleground::EndBattleground(uint32 winner)
             // Deduct 16 points from each teams arena-rating if there are no winners after 45+2 minutes
             else
             {
-                SetArenaTeamRatingChangeForTeam(ALLIANCE, ARENA_TIMELIMIT_POINTS_LOSS);
-                SetArenaTeamRatingChangeForTeam(HORDE, ARENA_TIMELIMIT_POINTS_LOSS);
-                winner_arena_team->FinishGame(ARENA_TIMELIMIT_POINTS_LOSS);
-                loser_arena_team->FinishGame(ARENA_TIMELIMIT_POINTS_LOSS);
+                if (wintraders)
+                {
+                    SetArenaTeamRatingChangeForTeam(ALLIANCE, 0);
+                    SetArenaTeamRatingChangeForTeam(HORDE, 0);
+                    winner_arena_team->FinishGame(0);
+                    loser_arena_team->FinishGame(0);
+                }
+                else
+                {
+                    SetArenaTeamRatingChangeForTeam(ALLIANCE, ARENA_TIMELIMIT_POINTS_LOSS);
+                    SetArenaTeamRatingChangeForTeam(HORDE, ARENA_TIMELIMIT_POINTS_LOSS);
+                    winner_arena_team->FinishGame(ARENA_TIMELIMIT_POINTS_LOSS);
+                    loser_arena_team->FinishGame(ARENA_TIMELIMIT_POINTS_LOSS);
+                }
             }
         }
         else
@@ -845,7 +865,7 @@ void Battleground::EndBattleground(uint32 winner)
         //if (!team) team = player->GetTeam();
 
         // per player calculation
-        if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
+        if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team && !wintraders)
         {
             if (team == winner)
             {
@@ -926,6 +946,36 @@ uint32 Battleground::GetBonusHonorFromKill(uint32 kills) const
     //variable kills means how many honorable kills you scored (so we need kills * honor_for_one_kill)
     uint32 maxLevel = std::min(GetMaxLevel(), 80U);
     return Trinity::Honor::hk_honor_at_level(maxLevel, float(kills));
+}
+
+bool Battleground::isWintrading(uint32 winnerTeam, uint32 loserTeam)
+{
+    // Check if player have the same ips
+    for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+    {
+        if (Player* playerWinner = _GetPlayerForTeam(winnerTeam, itr, "CheckWintrading"))
+        {
+            for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+            {
+                if (Player* playerLoser = _GetPlayerForTeam(winnerTeam, itr, "CheckWintrading"))
+                {
+                    if (playerWinner->GetSession()->GetRemoteAddress() == playerLoser->GetSession()->GetRemoteAddress())
+                    {
+                        sLog->outArena("Wintrading has accured during this battle --- Winner: %u , IP: %u, Loser: %u , IP: %u", winnerTeam, loserTeam, 
+                            playerWinner->GetSession()->GetRemoteAddress(), playerLoser->GetSession()->GetRemoteAddress());
+                        return true;
+
+                    }
+                }
+            }
+        }
+    }
+
+    //Make sure that the games lasts more then 90 seconds
+    if (GetStartTime() < 90*IN_MILLISECONDS)
+        return true;
+
+    return false;
 }
 
 void Battleground::BlockMovement(Player* player)

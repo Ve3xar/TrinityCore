@@ -1225,14 +1225,34 @@ void AddBattlegroundScripts()
 }
 
 #ifdef SCRIPTS
-/* This is where custom scripts' loading functions should be declared. */
-
+    void AddSC_go_portals();
+    void AddSC_item_arena_stone();
+    void AddSC_item_donation();
+    void AddSC_npc_card_master_gossip();
+    void AddSC_npc_level_master_gossip();
+    void AddSC_npc_mini_pet_gossip();
+    void AddSC_npc_protector();
+    void AddSC_npc_raid_master_gossip();
+    void AddSC_npc_trainer_gossips();
+    void AddSC_npc_vendor_gossips();
+    void AddSC_npc_warper_gossips();
+    void AddSC_npc_illusionist_gossip();
 #endif
 
 void AddCustomScripts()
 {
 #ifdef SCRIPTS
-    /* This is where custom scripts should be added. */
-
+    AddSC_go_portals();
+    AddSC_item_arena_stone();
+    AddSC_item_donation();
+    AddSC_npc_card_master_gossip();
+    AddSC_npc_level_master_gossip();
+    AddSC_npc_mini_pet_gossip();
+    AddSC_npc_protector();
+    AddSC_npc_raid_master_gossip();
+    AddSC_npc_trainer_gossips();
+    AddSC_npc_vendor_gossips();
+    AddSC_npc_warper_gossips();
+    AddSC_npc_illusionist_gossip();
 #endif
 }

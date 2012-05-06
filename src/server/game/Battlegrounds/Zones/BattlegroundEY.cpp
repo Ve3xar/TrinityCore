@@ -300,6 +300,7 @@ void BattlegroundEY::EndBattleground(uint32 winner)
     //complete map reward
     RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
     RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
+    RewardQuestToTeam(11337, winner);
 
     Battleground::EndBattleground(winner);
 }

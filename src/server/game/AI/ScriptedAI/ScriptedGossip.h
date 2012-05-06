@@ -88,4 +88,7 @@ enum eTradeskill
 // Closes the Menu
 #define CLOSE_GOSSIP_MENU()        PlayerTalkClass->SendCloseGossip()
 
+// Custom Function for Advanced vendorlist
+#define SEND_VENDORLIST_ADVANCED(a,b)   GetSession()->SendListInventoryAdvanced(a,b)
+
 #endif

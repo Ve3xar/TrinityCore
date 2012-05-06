@@ -1766,6 +1766,7 @@ class Player : public Unit, public GridObject<Player>
         void SendActionButtons(uint32 state) const;
         bool IsActionButtonDataValid(uint8 button, uint32 action, uint8 type);
 
+        bool IsInCustomTown;
         PvPInfo pvpInfo;
         void UpdatePvPState(bool onlyFFA = false);
         void SetPvP(bool state)

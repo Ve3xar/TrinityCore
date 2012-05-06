@@ -10,6 +10,18 @@
 
 set(scripts_STAT_SRCS
   ${scripts_STAT_SRCS}
+    Custom/go_portals.cpp
+    Custom/item_arena_stone.cpp
+    Custom/item_donation.cpp
+    Custom/npc_card_master_gossip.cpp   
+    Custom/npc_level_master_gossip.cpp    
+    Custom/npc_mini_pet_gossip.cpp
+    Custom/npc_protector.cpp
+    Custom/npc_raid_master_gossip.cpp
+    Custom/npc_trainer_gossips.cpp
+    Custom/npc_vendor_gossips.cpp
+    Custom/npc_warper_gossips.cpp
+    Custom/npc_illusionist_gossip.cpp
 )
 
 message("  -> Prepared: Custom")

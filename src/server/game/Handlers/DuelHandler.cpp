@@ -49,6 +49,9 @@ void WorldSession::HandleDuelAcceptedOpcode(WorldPacket& recvPacket)
     player->duel->startTimer = now;
     plTarget->duel->startTimer = now;
 
+    player->RemoveArenaSpellCooldowns();
+    plTarget->RemoveArenaSpellCooldowns();
+    
     player->SendDuelCountdown(3000);
     plTarget->SendDuelCountdown(3000);
 }
