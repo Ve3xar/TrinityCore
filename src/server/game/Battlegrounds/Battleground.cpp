@@ -738,7 +738,7 @@ void Battleground::EndBattleground(uint32 winner)
     int32  winner_matchmaker_change = 0;
     WorldPacket data;
     int32 winmsg_id = 0;
-    bool wintraders;
+    bool wintraders = false;
 
     if (winner == ALLIANCE)
     {
@@ -770,7 +770,7 @@ void Battleground::EndBattleground(uint32 winner)
     {
         winner_arena_team = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(winner));
         loser_arena_team = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeam(winner)));
-        wintraders = isWintrading(GetArenaTeamIdForTeam(winner), GetArenaTeamIdForTeam(GetOtherTeam(winner)));
+        wintraders = isWintrading(winner, GetOtherTeam(winner));
         if (winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
         {
             if (winner != WINNER_NONE && !wintraders)
@@ -957,22 +957,21 @@ bool Battleground::isWintrading(uint32 winnerTeam, uint32 loserTeam)
         {
             for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
             {
-                if (Player* playerLoser = _GetPlayerForTeam(winnerTeam, itr, "CheckWintrading"))
+                if (Player* playerLoser = _GetPlayerForTeam(loserTeam, itr, "CheckWintrading"))
                 {
                     if (playerWinner->GetSession()->GetRemoteAddress() == playerLoser->GetSession()->GetRemoteAddress())
                     {
-                        sLog->outArena("Wintrading has accured during this battle --- Winner: %u , IP: %u, Loser: %u , IP: %u", winnerTeam, loserTeam, 
-                            playerWinner->GetSession()->GetRemoteAddress(), playerLoser->GetSession()->GetRemoteAddress());
+						sLog->outArena("Wintrading has accured during this battle --- WinnerTeam: %u , LoserTeam: %u. Player: %s and Player: %s have the same IP: %s",
+							GetArenaTeamIdForTeam(winnerTeam), GetArenaTeamIdForTeam(loserTeam), playerWinner->GetName(), playerLoser->GetName(), playerWinner->GetSession()->GetRemoteAddress().c_str());
                         return true;
-
                     }
                 }
             }
         }
     }
 
-    //Make sure that the games lasts more then 90 seconds
-    if (GetStartTime() < 90*IN_MILLISECONDS)
+    //Make sure that the games lasts more then 60 seconds
+    if (GetStartTime() < 60*IN_MILLISECONDS)
         return true;
 
     return false;
