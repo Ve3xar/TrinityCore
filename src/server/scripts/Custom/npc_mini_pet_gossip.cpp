@@ -138,7 +138,7 @@ class npc_mini_pet_gossip : public CreatureScript
                     break;
 
                 case GOSSIP_ACTION_INFO_DEF+15:
-                    player->TeleportTo(1, -9456.155f, 1643.156f, 19.301f, 2.832f);
+                    player->TeleportTo(0, -7634.04f, -4565.26f, 131.41f, 3.21f);
                     player->CLOSE_GOSSIP_MENU();
                     break;
 

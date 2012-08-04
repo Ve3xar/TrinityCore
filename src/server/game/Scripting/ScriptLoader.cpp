@@ -1251,6 +1251,8 @@ void AddBattlegroundScripts()
     void AddSC_npc_vendor_gossips();
     void AddSC_npc_warper_gossips();
     void AddSC_npc_illusionist_gossip();
+    void AddSC_npc_illusionist_gossip();
+    void AddSC_npc_transmogrifier_gossip();
 #endif
 
 void AddCustomScripts()
@@ -1268,5 +1270,6 @@ void AddCustomScripts()
     AddSC_npc_vendor_gossips();
     AddSC_npc_warper_gossips();
     AddSC_npc_illusionist_gossip();
+    AddSC_npc_transmogrifier_gossip();
 #endif
 }

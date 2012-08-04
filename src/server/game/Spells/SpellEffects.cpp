@@ -4524,7 +4524,7 @@ void Spell::EffectDuel(SpellEffIndex effIndex)
         return;
     }
 
-    if (caster->IsInCustomTown)
+    if (!caster->allowDueling)
     {
         SendCastResult(SPELL_FAILED_NO_DUELING);            // Dueling isn't allowed here
         return;

@@ -864,7 +864,7 @@ Player::Player(WorldSession* session): Unit(true), m_achievementMgr(this), m_rep
 
     SetPendingBind(0, 0);
 
-    IsInCustomTown = false;
+    allowDueling = true;
 }
 
 Player::~Player()
@@ -7514,7 +7514,7 @@ void Player::UpdateArea(uint32 newArea)
     pvpInfo.inFFAPvPArea = area && (area->flags & AREA_FLAG_ARENA);
     UpdatePvPState(true);
 
-    IsInCustomTown = false;
+    allowDueling = true;
     
     UpdateAreaDependentAuras(newArea);
 
@@ -12491,7 +12491,10 @@ void Player::SetVisibleItemSlot(uint8 slot, Item* pItem)
 {
     if (pItem)
     {
-        SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetEntry());
+        if (pItem->HasFakeEntry())
+            SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetFakeEntry());
+        else
+            SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetEntry());
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0, pItem->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 1, pItem->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT));
     }
@@ -12612,6 +12615,12 @@ void Player::MoveItemFromInventory(uint8 bag, uint8 slot, bool update)
 {
     if (Item* it = GetItemByPos(bag, slot))
     {
+        //Custom Patch: Transmogrification
+        if(it->HasFakeEntry())
+        {
+            it->SetFakeEntry(0);
+            CharacterDatabase.PExecute("DELETE FROM custom_transmogrification WHERE guid = %u", it->GetGUIDLow());
+        }
         ItemRemovedQuestCheck(it->GetEntry(), it->GetCount());
         RemoveItem(bag, slot, update);
         it->SetNotRefundable(this, false);
@@ -17838,6 +17847,23 @@ Item* Player::_LoadItem(SQLTransaction& trans, uint32 zoneId, uint32 timeDiff, F
                     }
                 }
             }
+            // Custom Patch: Transmogrification
+            PreparedStatement* stmt_c = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ITEM_TRANSMOGRIFICATION);
+            stmt_c->setUInt32(0, itemGuid);
+            if (PreparedQueryResult result = CharacterDatabase.Query(stmt_c))
+            {
+                uint32 fakeEntry = (*result)[0].GetUInt32();
+                if (sObjectMgr->GetItemTemplate(fakeEntry)) // check that the item entry exists
+                    item->SetFakeEntry(fakeEntry);
+                else
+                {
+                    item->DeleteFakeEntry();
+                    CharacterDatabase.PExecute("DELETE FROM custom_transmogrification WHERE guid = %u", item->GetGUIDLow());
+
+                }
+            }
+            else
+                item->SetFakeEntry(0);
         }
         else
         {
@@ -25658,3 +25684,180 @@ void Player::SendMovementSetFeatherFall(bool apply)
     data << uint32(0);          //! movement counter
     SendDirectMessage(&data);
 }
+
+
+//Checks if the item can be used for transmogrification
+bool Player::ValidItemForTransmogrification(Item* item)
+{
+    //Make sure that the item still exist.
+    if (!item->IsInWorld())
+        return false;
+
+        uint32 itemType = item->GetTemplate()->Class;
+
+        if (itemType == ITEM_CLASS_WEAPON || itemType == ITEM_CLASS_ARMOR)
+        {
+            if (item->GetTemplate()->SubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE)
+            {
+                //If you want to allow other type of items to be transmogrified then set appropriate qualities to true
+                switch (item->GetTemplate()->Quality)
+                {
+                    case ITEM_QUALITY_POOR      : return false;                   
+                    case ITEM_QUALITY_NORMAL    : return true;
+                    case ITEM_QUALITY_UNCOMMON  : return true;
+                    case ITEM_QUALITY_RARE      : return true;
+                    case ITEM_QUALITY_EPIC      : return true;
+                    case ITEM_QUALITY_LEGENDARY : return true;
+                    case ITEM_QUALITY_ARTIFACT  : return false;
+                    case ITEM_QUALITY_HEIRLOOM  : return true;
+                    default                     : return false;
+                }
+            }
+        }
+    return false;
+}
+
+//Validation for transmogrification
+Transmogrification Player::ValidateTransmogrification(Item* item, Item* transItem)
+{
+    if (!ValidItemForTransmogrification(item) || !ValidItemForTransmogrification(transItem))
+        return TRANSMOG_ERR_INVALID_ITEMS;
+
+    if (!item->IsInWorld() || !transItem->IsInWorld())
+        return TRANSMOG_ERR_ITEMS_NOT_IN_WORLD;
+
+    if (!item->IsEquipped())
+        return TRANSMOG_ERR_ITEM_NOT_EQUIPPED;
+
+    if (transItem->IsInBag())
+        return TRANSMOG_ERR_TRANSITEM_NOT_IN_BAG;
+
+    if (transItem->GetTemplate()->DisplayInfoID == item->GetTemplate()->DisplayInfoID)
+        return TRANSMOG_ERR_SAME_DISPLAY;
+
+    if (CanUseItem(transItem) != EQUIP_ERR_OK)
+        return TRANSMOG_ERR_TRANSITEM_UNUSABLE;
+
+    uint32 transItemClass = transItem->GetTemplate()->Class;
+    uint32 itemClass = item->GetTemplate()->Class;
+    uint32 transItemSubClass = transItem->GetTemplate()->SubClass;
+    uint32 itemSubClass = item->GetTemplate()->SubClass;
+    uint32 transItemInvType = transItem->GetTemplate()->InventoryType;
+    uint32 itemInvType = item->GetTemplate()->InventoryType;
+
+    if (transItemClass != itemClass)
+        return TRANSMOG_ERR_ITEMS_HAVE_DIFF_CLASS;
+
+    switch (transItemClass)
+    {
+        case ITEM_CLASS_WEAPON:
+
+        //Check that items types are equal and allow main and off hand weapons to be transmogrified with one handed weapons
+        if (itemInvType == transItemInvType ||
+            ((itemInvType == INVTYPE_WEAPONMAINHAND || itemInvType == INVTYPE_WEAPONOFFHAND) && transItemInvType == INVTYPE_WEAPON))
+
+            //Check that items subclasses are equal and allow ranged weapons to be tranmogrified with other ranged subclasses
+            if (transItemSubClass == itemSubClass ||
+                ((transItemSubClass == ITEM_SUBCLASS_WEAPON_BOW || transItemSubClass == ITEM_SUBCLASS_WEAPON_GUN || transItemSubClass == ITEM_SUBCLASS_WEAPON_CROSSBOW) && 
+                  (itemSubClass == ITEM_SUBCLASS_WEAPON_BOW || itemSubClass == ITEM_SUBCLASS_WEAPON_GUN || itemSubClass == ITEM_SUBCLASS_WEAPON_CROSSBOW)))
+                   return TRANSMOG_ERR_OK;
+        break;
+
+        case ITEM_CLASS_ARMOR:
+
+        //Check that items types are equal and allow ropes to be transmogrified with chest and other way around.
+        if (itemInvType == transItemInvType ||
+            (itemInvType == INVTYPE_CHEST && transItemInvType == INVTYPE_ROBE) || (itemInvType == INVTYPE_ROBE && transItemInvType == INVTYPE_CHEST))
+            if (transItemSubClass == itemSubClass)
+                return TRANSMOG_ERR_OK;
+        break;
+
+        default: break;
+    }
+
+    return TRANSMOG_ERR_VALIDATION_FAILED;
+}
+
+void Player::Transmogrify(Item* item, Item* transItem)
+{
+    if (ValidateTransmogrification(item,transItem) == TRANSMOG_ERR_OK)
+    {
+        transItem->SetNotRefundable(this);
+        transItem->SetBinding(true);
+        uint32 fakeEntry = transItem->GetEntry();
+        item->SetFakeEntry(fakeEntry);
+        CharacterDatabase.PExecute("REPLACE INTO custom_transmogrification (guid, fakeEntry) VALUES (%u, %u)", item->GetGUIDLow(), fakeEntry);
+        UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item->GetSlot() * 2), fakeEntry);
+        PlayDirectSound(3337);
+        GetSession()->SendAreaTriggerMessage("Transmogrification was succesful");
+    }
+    else                     
+        GetSession()->SendNotification("An error occured during transmogirification");
+}
+
+void Player::RemoveTransmogrificationAtSlot(uint8 slot)
+{
+    if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+    {
+        if (item->HasFakeEntry())
+        {
+            item->DeleteFakeEntry();
+            CharacterDatabase.PExecute("DELETE FROM custom_transmogrification WHERE guid = %u", item->GetGUIDLow());
+            UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item->GetSlot() * 2), item->GetEntry());
+            GetSession()->SendAreaTriggerMessage("Transmogrification from the %s slot has been removed", GetSlotName(slot));
+            PlayDirectSound(3337);
+        }
+        else
+            GetSession()->SendAreaTriggerMessage("No transmogrification was found on the %s slot", GetSlotName(slot));
+    }
+}
+
+void Player::RemoveAllTransmogrification()
+{
+    bool removed = false;
+    for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; slot++)
+    {
+        if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+        {
+            if (item->HasFakeEntry())
+            {
+                item->DeleteFakeEntry();
+                CharacterDatabase.PExecute("DELETE FROM custom_transmogrification WHERE guid = %u", item->GetGUIDLow());
+                UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item->GetSlot() * 2), item->GetEntry());
+                removed = true;
+            }
+        }
+    }
+
+    if (removed)
+    {
+        GetSession()->SendAreaTriggerMessage("Transmogrifications has been removed from equipped items");
+        PlayDirectSound(3337);
+    }
+    else
+        GetSession()->SendNotification("You have no transmogrified on the equipped items");
+}
+
+char* Player::GetSlotName(uint8 slot)
+{
+    switch (slot)
+    {
+        case EQUIPMENT_SLOT_HEAD      : return "Head";
+        case EQUIPMENT_SLOT_SHOULDERS : return "Shoulders";
+        case EQUIPMENT_SLOT_CHEST     : return "Chest";
+        case EQUIPMENT_SLOT_WAIST     : return "Waist";
+        case EQUIPMENT_SLOT_LEGS      : return "Legs";
+        case EQUIPMENT_SLOT_FEET      : return "Feet";
+        case EQUIPMENT_SLOT_WRISTS    : return "Wrists";
+        case EQUIPMENT_SLOT_HANDS     : return "Hands";
+        case EQUIPMENT_SLOT_BACK      : return "Back";
+        case EQUIPMENT_SLOT_MAINHAND  : return "Main hand";
+        case EQUIPMENT_SLOT_OFFHAND   : return "Off hand";
+        case EQUIPMENT_SLOT_RANGED    : return "Ranged";
+        default                       : return "Invalid";
+    }
+}
+
+
+
+

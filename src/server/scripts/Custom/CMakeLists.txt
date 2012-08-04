@@ -22,6 +22,7 @@ set(scripts_STAT_SRCS
     Custom/npc_vendor_gossips.cpp
     Custom/npc_warper_gossips.cpp
     Custom/npc_illusionist_gossip.cpp
+    Custom/npc_transmogrifier_gossip.cpp
 )
 
 message("  -> Prepared: Custom")

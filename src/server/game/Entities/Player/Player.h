@@ -895,6 +895,19 @@ enum PlayerRestState
     REST_STATE_RAF_LINKED                            = 0x06
 };
 
+enum Transmogrification
+{
+    TRANSMOG_ERR_OK                         = 0,
+    TRANSMOG_ERR_ITEMS_NOT_IN_WORLD         = 1,
+    TRANSMOG_ERR_ITEM_NOT_EQUIPPED          = 2,
+    TRANSMOG_ERR_TRANSITEM_NOT_IN_BAG       = 3,
+    TRANSMOG_ERR_SAME_DISPLAY               = 4,
+    TRANSMOG_ERR_TRANSITEM_UNUSABLE         = 5,
+    TRANSMOG_ERR_ITEMS_HAVE_DIFF_CLASS      = 6,
+    TRANSMOG_ERR_INVALID_ITEMS              = 7,
+    TRANSMOG_ERR_VALIDATION_FAILED          = 8
+};
+
 class PlayerTaxi
 {
     public:
@@ -1766,7 +1779,7 @@ class Player : public Unit, public GridObject<Player>
         void SendActionButtons(uint32 state) const;
         bool IsActionButtonDataValid(uint8 button, uint32 action, uint8 type);
 
-        bool IsInCustomTown;
+        bool allowDueling;
         PvPInfo pvpInfo;
         void UpdatePvPState(bool onlyFFA = false);
         void SetPvP(bool state)
@@ -2528,6 +2541,17 @@ class Player : public Unit, public GridObject<Player>
             }
         }
 
+        /********************************************************/
+        /***           TRANSMOGRIFICATION SYSTEM              ***/
+        /********************************************************/
+
+        bool ValidItemForTransmogrification(Item* item);
+        Transmogrification ValidateTransmogrification(Item* item, Item* transItem);
+        void Transmogrify(Item* item, Item* transItem);
+        void RemoveTransmogrificationAtSlot(uint8 slot);
+        void RemoveAllTransmogrification();
+        char* GetSlotName(uint8 slot);
+
     protected:
         // Gamemaster whisper whitelist
         WhisperListContainer WhisperList;
@@ -2790,7 +2814,6 @@ class Player : public Unit, public GridObject<Player>
         bool IsAlwaysDetectableFor(WorldObject const* seer) const;
 
         uint8 m_grantableLevels;
-
     private:
         // internal common parts for CanStore/StoreItem functions
         InventoryResult CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemPosCountVec& dest, ItemTemplate const* pProto, uint32& count, bool swap, Item* pSrcItem) const;

@@ -1025,6 +1025,9 @@ Item* Item::CreateItem(uint32 item, uint32 count, Player const* player)
         if (pItem->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_ITEM), item, player))
         {
             pItem->SetCount(count);
+
+            pItem->_fakeEntry = 0; //Custom Patch: Transmogrification
+
             return pItem;
         }
         else

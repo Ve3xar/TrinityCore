@@ -1378,6 +1378,11 @@ void World::SetInitialWorldSettings()
     sLog->outString("Loading Item set names...");                // must be after LoadItemPrototypes
     sObjectMgr->LoadItemSetNames();
 
+    //Custom Patch: Transmogrification 
+    sLog->outString("Deleting non-existing transmogrification entries...");
+    CharacterDatabase.Execute("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)");
+    sLog->outString();
+
     sLog->outString("Loading Creature Model Based Info Data...");
     sObjectMgr->LoadCreatureModelInfo();
 
