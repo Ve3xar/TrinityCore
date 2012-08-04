@@ -98,6 +98,7 @@ class npc_transmogrifier_gossip : public CreatureScript
 
         void GenerateTransmogrificationItems(Player* player, Creature* creature, uint32 slot)
         {
+            bool result = false;
             if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
             {
                 Items.clear();
@@ -109,6 +110,7 @@ class npc_transmogrifier_gossip : public CreatureScript
                     {
                         if (player->ValidateTransmogrification(item, transItem) == TRANSMOG_ERR_OK)
                         {
+                            result = true;
                             uint32 transItemGUIDLow = transItem->GetGUIDLow();
                             Items[transItemGUIDLow] = transItem;
                             player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, transItem->GetTemplate()->Name1, GOSSIP_ACTION_INFO_DEF+2, transItemGUIDLow, "Using this item for transmogrify will bind it to you and make it non-refundable and non-tradeable.\nDo you wish to continue?\n\n"+ item->GetTemplate()->Name1, GetTransmogrificationPrice(item), false);
@@ -118,8 +120,8 @@ class npc_transmogrifier_gossip : public CreatureScript
                 }
             }
 
-            player->GetSession()->SendNotification("No appropriate items were found in the backpack that could be used for transmogrification");
-
+            if (!result)
+                player->GetSession()->SendNotification("No appropriate items were found in the backpack that could be used for transmogrification");
         }
 
         void GenerateItemsWithTransmogrification(Player* player)
