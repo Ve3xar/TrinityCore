@@ -705,6 +705,9 @@ class Battleground
         float m_TeamStartLocO[BG_TEAMS_COUNT];
         float m_StartMaxDist;
         uint32 ScriptId;
+
+        //custom
+        bool _wintrading;
 };
 #endif
 

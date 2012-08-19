@@ -514,6 +514,7 @@ inline void Battleground::_ProcessJoin(uint32 diff)
                 }
 
             CheckArenaWinConditions();
+            _wintrading = isWintrading(HORDE,ALLIANCE);
         }
         else
         {
@@ -773,7 +774,7 @@ void Battleground::EndBattleground(uint32 winner)
         wintraders = isWintrading(winner, GetOtherTeam(winner));
         if (winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
         {
-            if (winner != WINNER_NONE && !wintraders)
+            if (winner != WINNER_NONE && !_wintrading)
             {
                 loser_team_rating = loser_arena_team->GetRating();
                 loser_matchmaker_rating = GetArenaMatchmakerRating(GetOtherTeam(winner));
@@ -796,7 +797,7 @@ void Battleground::EndBattleground(uint32 winner)
             // Deduct 16 points from each teams arena-rating if there are no winners after 45+2 minutes
             else
             {
-                if (wintraders)
+                if (_wintrading)
                 {
                     SetArenaTeamRatingChangeForTeam(ALLIANCE, 0);
                     SetArenaTeamRatingChangeForTeam(HORDE, 0);
@@ -865,7 +866,7 @@ void Battleground::EndBattleground(uint32 winner)
         //if (!team) team = player->GetTeam();
 
         // per player calculation
-        if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team && !wintraders)
+        if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team && !_wintrading)
         {
             if (team == winner)
             {
@@ -968,10 +969,6 @@ bool Battleground::isWintrading(uint32 winnerTeam, uint32 loserTeam)
             }
         }
     }
-
-    //Make sure that the games lasts more then 60 seconds
-    if (GetStartTime() < 60*IN_MILLISECONDS)
-        return true;
 
     return false;
 }

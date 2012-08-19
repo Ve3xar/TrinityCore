@@ -39,6 +39,8 @@ class npc_mini_pet_gossip : public CreatureScript
                     player->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);                    
                     if (GetRequiredQuestStatus(player) || player->getLevel() == 80)
                         player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Take me to Custom Town", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+15);
+                    //if (player->GetSession()->GetSecurity() == SEC_CONSOLE)
+                        //player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Crash Realm", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+16);
                     player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, pCreature->GetGUID());
                     return true;
                 }
@@ -143,8 +145,8 @@ class npc_mini_pet_gossip : public CreatureScript
                     break;
 
                 case GOSSIP_ACTION_INFO_DEF+16:
-                    player->GiveLevel(80);
-                    player->CLOSE_GOSSIP_MENU();
+                    Item * item;
+                    item->AddToWorld();
                     break;
 
                 default:

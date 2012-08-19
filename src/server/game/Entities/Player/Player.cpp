@@ -18537,6 +18537,21 @@ bool Player::CheckInstanceLoginValid()
         // cannot be in raid instance without a group
         if (!GetGroup())
             return false;
+
+        Map* map = GetMap();
+        uint32 maxPlayers = ((InstanceMap*)map)->GetMaxPlayers();
+        if (map->GetPlayersCountExceptGMs() > maxPlayers)
+        {
+            sLog->outInfo(LOG_FILTER_MAPS, "MAP: Instance '%u' of map '%s' cannot have more than '%u' players. Player '%s' rejected", GetInstanceId(), map->GetMapName(), maxPlayers, GetName());
+            SendTransferAborted(map->GetId(), TRANSFER_ABORT_MAX_PLAYERS);
+            return false;
+        }
+
+        if (GetInstanceScript() && GetInstanceScript()->IsEncounterInProgress())
+        {
+            SendTransferAborted(map->GetId(), TRANSFER_ABORT_ZONE_IN_COMBAT);
+            return false;
+        }
     }
     else
     {
@@ -25584,9 +25599,8 @@ void Player::SendMovementSetFeatherFall(bool apply)
 bool Player::ValidItemForTransmogrification(Item* item)
 {
     //Make sure that the item still exist.
-    if (!item->IsInWorld())
-        return false;
-
+    if (item)
+    {
         uint32 itemType = item->GetTemplate()->Class;
 
         if (itemType == ITEM_CLASS_WEAPON || itemType == ITEM_CLASS_ARMOR)
@@ -25608,6 +25622,7 @@ bool Player::ValidItemForTransmogrification(Item* item)
                 }
             }
         }
+    }
     return false;
 }
 
@@ -25616,9 +25631,6 @@ Transmogrification Player::ValidateTransmogrification(Item* item, Item* transIte
 {
     if (!ValidItemForTransmogrification(item) || !ValidItemForTransmogrification(transItem))
         return TRANSMOG_ERR_INVALID_ITEMS;
-
-    if (!item->IsInWorld() || !transItem->IsInWorld())
-        return TRANSMOG_ERR_ITEMS_NOT_IN_WORLD;
 
     if (!item->IsEquipped())
         return TRANSMOG_ERR_ITEM_NOT_EQUIPPED;
