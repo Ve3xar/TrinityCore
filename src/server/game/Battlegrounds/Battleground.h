@@ -278,6 +278,22 @@ enum GroupJoinBattlegroundResult
     ERR_IN_NON_RANDOM_BG                    = -15,          // Can't queue for Random Battleground while in another Battleground queue.
 };
 
+//Custom
+enum WintradingResult
+{
+    NO_ERR      = 0,        // No wintrading occured, points can be given out
+    ERR_SAME_IP = 1,        // Someone on a team has the same ip with opponents      
+    ERR_TIME    = 2         // The match lasted less than the starting time + 10 seconds.
+};
+
+enum BGEvent
+{
+    BG_EVENT_WSG  = 100,
+    BG_EVENT_AB   = 101,
+    BG_EVENT_EOTS = 102,
+    BG_EVENT_SOTA = 103
+};
+
 class BattlegroundScore
 {
     public:
@@ -405,7 +421,6 @@ class Battleground
         bool isArena() const        { return m_IsArena; }
         bool isBattleground() const { return !m_IsArena; }
         bool isRated() const        { return m_IsRated; }
-        bool isWintrading(uint32 winnerTeam, uint32 loserTeam);
 
         typedef std::map<uint64, BattlegroundPlayer> BattlegroundPlayerMap;
         BattlegroundPlayerMap const& GetPlayers() const { return m_Players; }
@@ -576,6 +591,11 @@ class Battleground
 
         virtual uint64 GetFlagPickerGUID(int32 /*team*/ = -1) const { return 0; }
 
+        //custom
+        void RewardBGEventRewards(uint32 EventId, uint32 TeamID);
+        void EndOfMatchChecks(uint32 winnerTeam, uint32 loserTeam);
+        void SetWintrading(WintradingResult error) { _wintrading = error; }
+
     protected:
         // this method is called, when BG cannot spawn its own spirit guide, or something is wrong, It correctly ends Battleground
         void EndNow();
@@ -707,7 +727,7 @@ class Battleground
         uint32 ScriptId;
 
         //custom
-        bool _wintrading;
+        uint32 _wintrading;
 };
 #endif
 

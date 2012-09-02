@@ -294,9 +294,17 @@ void BattlegroundEY::EndBattleground(uint32 winner)
 {
     //win reward
     if (winner == ALLIANCE)
+    {
         RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
+        //Custom
+        RewardBGEventRewards(BG_EVENT_AB, ALLIANCE);
+    }
     if (winner == HORDE)
+    {
         RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
+        //Custom
+        RewardBGEventRewards(BG_EVENT_EOTS, HORDE);
+    }
     //complete map reward
     RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
     RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);

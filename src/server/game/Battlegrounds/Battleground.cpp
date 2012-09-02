@@ -34,6 +34,8 @@
 #include "SpellAuras.h"
 #include "SpellAuraEffects.h"
 #include "Util.h"
+#include "GameEventMgr.h"
+#include "Chat.h"
 
 namespace Trinity
 {
@@ -205,6 +207,8 @@ Battleground::Battleground()
     StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_BG_WS_START_ONE_MINUTE;
     StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_BG_WS_START_HALF_MINUTE;
     StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_BG_WS_HAS_BEGUN;
+
+    _wintrading = NO_ERR;
 }
 
 Battleground::~Battleground()
@@ -514,7 +518,6 @@ inline void Battleground::_ProcessJoin(uint32 diff)
                 }
 
             CheckArenaWinConditions();
-            _wintrading = isWintrading(HORDE,ALLIANCE);
         }
         else
         {
@@ -739,7 +742,6 @@ void Battleground::EndBattleground(uint32 winner)
     int32  winner_matchmaker_change = 0;
     WorldPacket data;
     int32 winmsg_id = 0;
-    bool wintraders = false;
 
     if (winner == ALLIANCE)
     {
@@ -771,10 +773,14 @@ void Battleground::EndBattleground(uint32 winner)
     {
         winner_arena_team = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(winner));
         loser_arena_team = sArenaTeamMgr->GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeam(winner)));
-        wintraders = isWintrading(winner, GetOtherTeam(winner));
+
+        //In case players have different IPs we still need to check damage, length of the match
+        if (_wintrading == NO_ERR)
+            EndOfMatchChecks(winner, GetOtherTeam(winner));
+
         if (winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
         {
-            if (winner != WINNER_NONE && !_wintrading)
+            if (winner != WINNER_NONE && _wintrading == NO_ERR)
             {
                 loser_team_rating = loser_arena_team->GetRating();
                 loser_matchmaker_rating = GetArenaMatchmakerRating(GetOtherTeam(winner));
@@ -797,7 +803,7 @@ void Battleground::EndBattleground(uint32 winner)
             // Deduct 16 points from each teams arena-rating if there are no winners after 45+2 minutes
             else
             {
-                if (_wintrading)
+                if (_wintrading != NO_ERR)
                 {
                     SetArenaTeamRatingChangeForTeam(ALLIANCE, 0);
                     SetArenaTeamRatingChangeForTeam(HORDE, 0);
@@ -847,7 +853,7 @@ void Battleground::EndBattleground(uint32 winner)
             player->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
 
         // Last standing - Rated 5v5 arena & be solely alive player
-        if (team == winner && isArena() && isRated() && GetArenaType() == ARENA_TYPE_5v5 && aliveWinners == 1 && player->isAlive())
+        if (team == winner && isArena() && isRated() && GetArenaType() == ARENA_TYPE_5v5 && aliveWinners == 1 && player->isAlive() && _wintrading == NO_ERR)
             player->CastSpell(player, SPELL_THE_LAST_STANDING, true);
 
         if (!player->isAlive())
@@ -866,7 +872,7 @@ void Battleground::EndBattleground(uint32 winner)
         //if (!team) team = player->GetTeam();
 
         // per player calculation
-        if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team && !_wintrading)
+        if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team && _wintrading == NO_ERR)
         {
             if (team == winner)
             {
@@ -937,8 +943,37 @@ void Battleground::EndBattleground(uint32 winner)
         loser_arena_team->NotifyStatsChanged();
     }
 
-    if (winmsg_id)
+    if (winmsg_id && _wintrading == NO_ERR)
         SendMessageToAll(winmsg_id, CHAT_MSG_BG_SYSTEM_NEUTRAL);
+    else if (_wintrading == ERR_SAME_IP)
+        SendMessageToAll(LANG_WINTRADING_SAME_IP, CHAT_MSG_BG_SYSTEM_NEUTRAL);
+    else if (_wintrading == ERR_TIME)
+        SendMessageToAll(LANG_WINTRADING_TIME, CHAT_MSG_BG_SYSTEM_NEUTRAL);
+}
+
+//custom
+void Battleground::RewardBGEventRewards(uint32 EventId, uint32 TeamID)
+{
+    if (!sGameEventMgr->IsActiveEvent(EventId))
+        return;
+
+    uint32 arena_points = 100;
+    uint32 honor_points = 5000; //Don't forget the that honor is set as x3 in configs
+
+    for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+        if (Player* player = _GetPlayerForTeam(TeamID, itr, "RewardBGEventRewards"))
+        {
+            player->ModifyArenaPoints(arena_points);
+            player->RewardHonor(NULL, 1, honor_points);
+            ChatHandler(player).PSendSysMessage("|CFF1CB619 Additional 15000 Honor Points and 100 Arena Points were rewarded for the victory in this battleground event|r");
+        }
+}
+
+void Battleground::EndOfMatchChecks(uint32 winnerTeam, uint32 loserTeam)
+{
+    //Make sure that the games lasts more than the starting time
+    if (GetStartDelayTime() > 0)
+        SetWintrading(ERR_TIME);  
 }
 
 uint32 Battleground::GetBonusHonorFromKill(uint32 kills) const
@@ -946,31 +981,6 @@ uint32 Battleground::GetBonusHonorFromKill(uint32 kills) const
     //variable kills means how many honorable kills you scored (so we need kills * honor_for_one_kill)
     uint32 maxLevel = std::min(GetMaxLevel(), 80U);
     return Trinity::Honor::hk_honor_at_level(maxLevel, float(kills));
-}
-
-bool Battleground::isWintrading(uint32 winnerTeam, uint32 loserTeam)
-{
-    // Check if player have the same ips
-    for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
-    {
-        if (Player* playerWinner = _GetPlayerForTeam(winnerTeam, itr, "CheckWintrading"))
-        {
-            for (BattlegroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
-            {
-                if (Player* playerLoser = _GetPlayerForTeam(loserTeam, itr, "CheckWintrading"))
-                {
-                    if (playerWinner->GetSession()->GetRemoteAddress() == playerLoser->GetSession()->GetRemoteAddress())
-                    {
-						sLog->outDebug(LOG_FILTER_BATTLEGROUND, "Wintrading has accured during this battle --- WinnerTeam: %u , LoserTeam: %u. Player: %s and Player: %s have the same IP: %s",
-							GetArenaTeamIdForTeam(winnerTeam), GetArenaTeamIdForTeam(loserTeam), playerWinner->GetName(), playerLoser->GetName(), playerWinner->GetSession()->GetRemoteAddress().c_str());
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-
-    return false;
 }
 
 void Battleground::BlockMovement(Player* player)

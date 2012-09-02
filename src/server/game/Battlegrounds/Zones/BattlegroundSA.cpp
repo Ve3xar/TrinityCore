@@ -860,9 +860,17 @@ void BattlegroundSA::EndBattleground(uint32 winner)
 {
     //honor reward for winning
     if (winner == ALLIANCE)
+    {
         RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
-    else if (winner == HORDE)
+        //Custom
+        RewardBGEventRewards(BG_EVENT_AB, ALLIANCE);
+    }
+    if (winner == HORDE)
+    {
         RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
+        //Custom
+        RewardBGEventRewards(BG_EVENT_SOTA, HORDE);
+    }
 
     //complete map_end rewards (even if no team wins)
     RewardHonorToTeam(GetBonusHonorFromKill(2), ALLIANCE);
