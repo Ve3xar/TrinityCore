@@ -297,18 +297,17 @@ void BattlegroundEY::EndBattleground(uint32 winner)
     {
         RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
         //Custom
-        RewardBGEventRewards(BG_EVENT_AB, ALLIANCE);
+        RewardQuestToTeam(BG_QUEST_EOTS, winner);
     }
     if (winner == HORDE)
     {
         RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
         //Custom
-        RewardBGEventRewards(BG_EVENT_EOTS, HORDE);
+        RewardQuestToTeam(BG_QUEST_EOTS, winner);
     }
     //complete map reward
     RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);
     RewardHonorToTeam(GetBonusHonorFromKill(1), HORDE);
-    RewardQuestToTeam(11337, winner);
 
     Battleground::EndBattleground(winner);
 }

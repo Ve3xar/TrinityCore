@@ -745,13 +745,13 @@ void BattlegroundWS::EndBattleground(uint32 winner)
     {
         RewardHonorToTeam(GetBonusHonorFromKill(m_HonorWinKills), ALLIANCE);
         //Custom
-        RewardBGEventRewards(BG_EVENT_AB, ALLIANCE);
+        RewardQuestToTeam(BG_QUEST_WSG, winner);
     }
     if (winner == HORDE)
     {
         RewardHonorToTeam(GetBonusHonorFromKill(m_HonorWinKills), HORDE);
         //Custom
-        RewardBGEventRewards(BG_EVENT_WSG, HORDE);
+        RewardQuestToTeam(BG_QUEST_WSG, winner);
     }
     //complete map_end rewards (even if no team wins)
     RewardHonorToTeam(GetBonusHonorFromKill(m_HonorEndKills), ALLIANCE);
