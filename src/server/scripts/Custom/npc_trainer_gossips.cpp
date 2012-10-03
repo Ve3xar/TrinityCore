@@ -287,9 +287,156 @@ class npc_dk_trainer_gossip : public CreatureScript
         }
 };
 
+class npc_class_trainer_gossip : public CreatureScript
+{
+    public:
+        npc_class_trainer_gossip(): CreatureScript("npc_class_trainer_gossip"){}
+
+        bool OnGossipHello(Player* player, Creature* creature)
+        {
+            if (player->isInCombat())
+            {
+                player->CLOSE_GOSSIP_MENU();
+                creature->MonsterWhisper("You are in combat!", player->GetGUID());
+                return true;
+            }
+            else
+            {
+                if (creature->isTrainer())
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
+
+                 if (creature->isCanTrainingAndResetTalentsOf(player))
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "I wish to unlearn my talents", GOSSIP_SENDER_MAIN, GOSSIP_OPTION_UNLEARNTALENTS);
+
+                if (player->GetSpecsCount() == 1 && creature->isCanTrainingAndResetTalentsOf(player) && player->getLevel() >= sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL))
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, "Purchase a Dual Talent Specialization.", GOSSIP_SENDER_MAIN, GOSSIP_OPTION_LEARNDUALSPEC);
+
+                player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE,creature->GetGUID());
+                return true;
+            }
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 uiAction)
+        {
+            player->PlayerTalkClass->ClearMenus();
+
+            switch (uiAction)
+            {
+                case GOSSIP_ACTION_TRAIN:
+                     switch (player->getClass())
+                    {
+                        case CLASS_DEATH_KNIGHT:
+                            if (player->getLevel() >= 55)
+                            {
+                                player->learnSpell(48778, false);
+                                player->learnSpell(53428, false);
+                                player->learnSpell(50977, false);
+                                player->learnSpell(48743, false);
+                            }
+                            if (player->getLevel() >= 61)
+                            {
+                                player->learnSpell(3714, false);
+                            }
+                            if (player->getLevel() >= 65)
+                            {
+                                player->learnSpell(57330, false);
+                            }
+                            if (player->getLevel() >= 67)
+                            {
+                                player->learnSpell(56815, false);
+                            }
+                            break;
+
+                        case CLASS_WARLOCK:
+                            if (player->getLevel() >= 20)
+                            {
+                                player->learnSpell(5784, false);
+                            }
+                            if (player->getLevel() >= 40)
+                            {
+                                player->learnSpell(23161, false);
+                            }
+                            break;
+
+                        case CLASS_PALADIN:
+                            if (player->getFaction() == ALLIANCE)
+                            {
+                                if (player->getLevel() >= 20)
+                                {
+                                    player->learnSpell(13819, false);
+                                }
+                                if (player->getLevel() >= 40)
+                                {
+                                    player->learnSpell(23214, false);
+                                }
+                            }
+                            if (player->getFaction() == HORDE)
+                            {
+                                if (player->getLevel() >= 20)
+                                {
+                                    player->learnSpell(34769, false);
+                                }
+                                if (player->getLevel() >= 40)
+                                {
+                                    player->learnSpell(34767, false);
+                                }
+                            }
+                            break;
+
+                        case CLASS_DRUID:
+                            if(player->getLevel() >= 60)
+                            {
+                                player->learnSpell(33943, false);
+                            }
+                            if(player->getLevel() >= 71)
+                            {
+                                player->learnSpell(40120, false);
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
+                    player->GetSession()->SendTrainerList(creature->GetGUID());
+                break;
+
+                case GOSSIP_OPTION_UNLEARNTALENTS:
+                    player->CLOSE_GOSSIP_MENU();
+                    player->SendTalentWipeConfirm(creature->GetGUID());
+                break;
+
+                case GOSSIP_OPTION_LEARNDUALSPEC:
+                    if (player->GetSpecsCount() == 1 && !(player->getLevel() < sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL)))
+                    {   
+                        if (!player->HasEnoughMoney(10000000))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            player->PlayerTalkClass->SendCloseGossip();
+                            break;
+                        }
+                        else
+                        {
+                            player->ModifyMoney(-10000000);
+
+                            // Cast spells that teach dual spec
+                            // Both are also ImplicitTarget self and must be cast by player
+                            player->CastSpell(player, 63680, true, NULL, NULL, player->GetGUID());
+                            player->CastSpell(player, 63624, true, NULL, NULL, player->GetGUID());
+
+                            // Should show another Gossip text with "Congratulations..."
+                            player->PlayerTalkClass->SendCloseGossip();
+                        }
+                    }
+                break;
+            }
+            return true;
+        }
+};
+
 void AddSC_npc_trainer_gossips()
 {
     new npc_profession_trainer_gossip();
     new npc_riding_trainer_gossip();
     new npc_dk_trainer_gossip();
+    new npc_class_trainer_gossip();
 }

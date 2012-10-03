@@ -725,6 +725,44 @@ class npc_heirloom_vendor : public CreatureScript
         }
 };
 
+class npc_glory_vendor : public CreatureScript
+{
+    public:
+        npc_glory_vendor(): CreatureScript("npc_glory_vendor"){}
+
+        bool OnGossipHello(Player* pPlayer, Creature* pCreature)
+        {
+            if (pPlayer->isInCombat())
+            {
+                pPlayer->CLOSE_GOSSIP_MENU();
+                pCreature->MonsterWhisper("You are in combat!", pPlayer->GetGUID());
+                return true;
+            }
+            else if (pPlayer->HasTitle(14) || pPlayer->HasTitle(28))
+            {
+                pPlayer->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, "Vendor", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
+                pPlayer->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, pCreature->GetGUID());
+                return true;
+            }
+        }
+
+        bool OnGossipSelect(Player* pPlayer, Creature* pCreature, uint32 sender, uint32 uiAction)
+        {
+            pPlayer->PlayerTalkClass->ClearMenus();
+
+            switch(uiAction)
+            {
+                case GOSSIP_ACTION_INFO_DEF:
+                    pPlayer->GetSession()->SendListInventory(pCreature->GetGUID());
+                break;
+
+                default:
+                break;
+            }
+            return true;
+        }
+};
+
 void AddSC_npc_vendor_gossips()
 {
     new npc_tier3_vendor();
@@ -738,4 +776,5 @@ void AddSC_npc_vendor_gossips()
     new npc_gem_vendor();
     new npc_enchanting_vendor();
     new npc_heirloom_vendor();
+    new npc_glory_vendor();
 }
