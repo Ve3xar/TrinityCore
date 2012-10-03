@@ -324,8 +324,8 @@ void WorldSession::HandleBattlefieldListOpcode(WorldPacket &recv_data)
     uint8 fromWhere;
     recv_data >> fromWhere;                                 // 0 - battlemaster (lua: ShowBattlefieldList), 1 - UI (lua: RequestBattlegroundInstanceInfo)
 
-    uint8 unk1;
-    recv_data >> unk1;                                       // Unknown 3.2.2
+    uint8 canGainXP;
+    recv_data >> canGainXP;                                 // players with locked xp have their own bg queue on retail
 
     BattlemasterListEntry const* bl = sBattlemasterListStore.LookupEntry(bgTypeId);
     if (!bl)
@@ -462,7 +462,7 @@ void WorldSession::HandleBattleFieldPortOpcode(WorldPacket &recv_data)
             sLog->outDebug(LOG_FILTER_BATTLEGROUND, "Battleground: player %s (%u) joined battle for bg %u, bgtype %u, queue type %u.", _player->GetName(), _player->GetGUIDLow(), bg->GetInstanceID(), bg->GetTypeID(), bgQueueTypeId);
             break;
         case 0:                                         // leave queue
-            if (bg->isArena() && bg->GetStatus() != STATUS_WAIT_QUEUE)
+            if (bg->isArena() && bg->GetStatus() > STATUS_WAIT_QUEUE)
                 return;
 
             // if player leaves rated arena match before match start, it is counted as he played but he lost

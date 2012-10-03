@@ -210,24 +210,24 @@ void BattlegroundAB::RemovePlayer(Player* /*player*/, uint64 /*guid*/, uint32 /*
 
 }
 
-void BattlegroundAB::HandleAreaTrigger(Player* Source, uint32 Trigger)
+void BattlegroundAB::HandleAreaTrigger(Player* player, uint32 trigger)
 {
     if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
-    switch (Trigger)
+    switch (trigger)
     {
         case 3948:                                          // Arathi Basin Alliance Exit.
-            if (Source->GetTeam() != ALLIANCE)
-                Source->GetSession()->SendAreaTriggerMessage("Only The Alliance can use that portal");
+            if (player->GetTeam() != ALLIANCE)
+                player->GetSession()->SendAreaTriggerMessage("Only The Alliance can use that portal");
             else
-                Source->LeaveBattleground();
+                player->LeaveBattleground();
             break;
         case 3949:                                          // Arathi Basin Horde Exit.
-            if (Source->GetTeam() != HORDE)
-                Source->GetSession()->SendAreaTriggerMessage("Only The Horde can use that portal");
+            if (player->GetTeam() != HORDE)
+                player->GetSession()->SendAreaTriggerMessage("Only The Horde can use that portal");
             else
-                Source->LeaveBattleground();
+                player->LeaveBattleground();
             break;
         case 3866:                                          // Stables
         case 3869:                                          // Gold Mine
@@ -236,10 +236,10 @@ void BattlegroundAB::HandleAreaTrigger(Player* Source, uint32 Trigger)
         case 3870:                                          // Black Smith
         case 4020:                                          // Unk1
         case 4021:                                          // Unk2
+        case 4674:                                          // Unk3
             //break;
         default:
-            //sLog->outError(LOG_FILTER_BATTLEGROUND, "WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
-            //Source->GetSession()->SendAreaTriggerMessage("Warning: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            Battleground::HandleAreaTrigger(player, trigger);
             break;
     }
 }
@@ -364,6 +364,7 @@ void BattlegroundAB::_NodeOccupied(uint8 node, Team team)
         if (m_Nodes[node] == GetTeamIndexByTeamId(team) + BG_AB_NODE_TYPE_OCCUPIED && !m_NodeTimers[i])
             ++capturedNodes;
     }
+
     if (capturedNodes >= 5)
         CastSpellOnTeam(SPELL_AB_QUEST_REWARD_5_BASES, team);
     if (capturedNodes >= 4)
@@ -552,14 +553,14 @@ bool BattlegroundAB::SetupBattleground()
 {
     for (int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
     {
-        if (!AddObject(BG_AB_OBJECT_BANNER_NEUTRAL + 8*i, BG_AB_OBJECTID_NODE_BANNER_0 + i, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_BANNER_CONT_A + 8*i, BG_AB_OBJECTID_BANNER_CONT_A, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_BANNER_CONT_H + 8*i, BG_AB_OBJECTID_BANNER_CONT_H, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_BANNER_ALLY + 8*i, BG_AB_OBJECTID_BANNER_A, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_BANNER_HORDE + 8*i, BG_AB_OBJECTID_BANNER_H, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_AURA_ALLY + 8*i, BG_AB_OBJECTID_AURA_A, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_AURA_HORDE + 8*i, BG_AB_OBJECTID_AURA_H, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_AURA_CONTESTED + 8*i, BG_AB_OBJECTID_AURA_C, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, sin(BG_AB_NodePositions[i][3]/2), cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+        if (!AddObject(BG_AB_OBJECT_BANNER_NEUTRAL + 8*i, BG_AB_OBJECTID_NODE_BANNER_0 + i, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_BANNER_CONT_A + 8*i, BG_AB_OBJECTID_BANNER_CONT_A, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_BANNER_CONT_H + 8*i, BG_AB_OBJECTID_BANNER_CONT_H, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_BANNER_ALLY + 8*i, BG_AB_OBJECTID_BANNER_A, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_BANNER_HORDE + 8*i, BG_AB_OBJECTID_BANNER_H, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_AURA_ALLY + 8*i, BG_AB_OBJECTID_AURA_A, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_AURA_HORDE + 8*i, BG_AB_OBJECTID_AURA_H, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_AURA_CONTESTED + 8*i, BG_AB_OBJECTID_AURA_C, BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2], BG_AB_NodePositions[i][3], 0, 0, std::sin(BG_AB_NodePositions[i][3]/2), std::cos(BG_AB_NodePositions[i][3]/2), RESPAWN_ONE_DAY)
 )
         {
             sLog->outError(LOG_FILTER_SQL, "BatteGroundAB: Failed to spawn some object Battleground not created!");
@@ -576,9 +577,9 @@ bool BattlegroundAB::SetupBattleground()
     //buffs
     for (int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
     {
-        if (!AddObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + 3 * i, Buff_Entries[0], BG_AB_BuffPositions[i][0], BG_AB_BuffPositions[i][1], BG_AB_BuffPositions[i][2], BG_AB_BuffPositions[i][3], 0, 0, sin(BG_AB_BuffPositions[i][3]/2), cos(BG_AB_BuffPositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + 3 * i + 1, Buff_Entries[1], BG_AB_BuffPositions[i][0], BG_AB_BuffPositions[i][1], BG_AB_BuffPositions[i][2], BG_AB_BuffPositions[i][3], 0, 0, sin(BG_AB_BuffPositions[i][3]/2), cos(BG_AB_BuffPositions[i][3]/2), RESPAWN_ONE_DAY)
-            || !AddObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + 3 * i + 2, Buff_Entries[2], BG_AB_BuffPositions[i][0], BG_AB_BuffPositions[i][1], BG_AB_BuffPositions[i][2], BG_AB_BuffPositions[i][3], 0, 0, sin(BG_AB_BuffPositions[i][3]/2), cos(BG_AB_BuffPositions[i][3]/2), RESPAWN_ONE_DAY)
+        if (!AddObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + 3 * i, Buff_Entries[0], BG_AB_BuffPositions[i][0], BG_AB_BuffPositions[i][1], BG_AB_BuffPositions[i][2], BG_AB_BuffPositions[i][3], 0, 0, std::sin(BG_AB_BuffPositions[i][3]/2), std::cos(BG_AB_BuffPositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + 3 * i + 1, Buff_Entries[1], BG_AB_BuffPositions[i][0], BG_AB_BuffPositions[i][1], BG_AB_BuffPositions[i][2], BG_AB_BuffPositions[i][3], 0, 0, std::sin(BG_AB_BuffPositions[i][3]/2), std::cos(BG_AB_BuffPositions[i][3]/2), RESPAWN_ONE_DAY)
+            || !AddObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + 3 * i + 2, Buff_Entries[2], BG_AB_BuffPositions[i][0], BG_AB_BuffPositions[i][1], BG_AB_BuffPositions[i][2], BG_AB_BuffPositions[i][3], 0, 0, std::sin(BG_AB_BuffPositions[i][3]/2), std::cos(BG_AB_BuffPositions[i][3]/2), RESPAWN_ONE_DAY)
 )
             sLog->outError(LOG_FILTER_SQL, "BatteGroundAB: Failed to spawn buff object!");
     }
@@ -690,11 +691,11 @@ void BattlegroundAB::UpdatePlayerScore(Player* Source, uint32 type, uint32 value
     {
         case SCORE_BASES_ASSAULTED:
             ((BattlegroundABScore*)itr->second)->BasesAssaulted += value;
-            Source->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, AB_OBJECTIVE_ASSAULT_BASE);
+            Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, AB_OBJECTIVE_ASSAULT_BASE);
             break;
         case SCORE_BASES_DEFENDED:
             ((BattlegroundABScore*)itr->second)->BasesDefended += value;
-            Source->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, AB_OBJECTIVE_DEFEND_BASE);
+            Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, AB_OBJECTIVE_DEFEND_BASE);
             break;
         default:
             Battleground::UpdatePlayerScore(Source, type, value, doAddHonor);

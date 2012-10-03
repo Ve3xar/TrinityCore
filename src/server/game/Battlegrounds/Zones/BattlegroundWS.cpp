@@ -65,7 +65,7 @@ void BattlegroundWS::PostUpdateImpl(uint32 diff)
 {
     if (GetStatus() == STATUS_IN_PROGRESS)
     {
-        if (GetStartTime() >= 25*MINUTE*IN_MILLISECONDS)
+        if (GetStartTime() >= 27*MINUTE*IN_MILLISECONDS)
         {
             if (GetTeamScore(ALLIANCE) == 0)
             {
@@ -83,7 +83,8 @@ void BattlegroundWS::PostUpdateImpl(uint32 diff)
             else
                 EndBattleground(ALLIANCE);
         }
-        else if (GetStartTime() > uint32(_minutesElapsed * MINUTE * IN_MILLISECONDS))
+        // first update needed after 1 minute of game already in progress
+        else if (GetStartTime() > uint32(_minutesElapsed * MINUTE * IN_MILLISECONDS) +  3 * MINUTE * IN_MILLISECONDS)
         {
             ++_minutesElapsed;
             UpdateWorldState(BG_WS_STATE_TIMER, 25 - _minutesElapsed);
@@ -159,6 +160,17 @@ void BattlegroundWS::PostUpdateImpl(uint32 diff)
         }
         else
         {
+            if (Player* player = ObjectAccessor::FindPlayer(m_FlagKeepers[0]))
+            {
+                player->RemoveAurasDueToSpell(WS_SPELL_FOCUSED_ASSAULT);
+                player->RemoveAurasDueToSpell(WS_SPELL_BRUTAL_ASSAULT);
+            }
+            if (Player* player = ObjectAccessor::FindPlayer(m_FlagKeepers[1]))
+            {
+                player->RemoveAurasDueToSpell(WS_SPELL_FOCUSED_ASSAULT);
+                player->RemoveAurasDueToSpell(WS_SPELL_BRUTAL_ASSAULT);
+            }
+
             _flagSpellForceTimer = 0; //reset timer.
             _flagDebuffState = 0;
         }
@@ -453,7 +465,7 @@ void BattlegroundWS::EventPlayerClickedOnFlag(Player* Source, GameObject* target
         UpdateFlagState(HORDE, BG_WS_FLAG_STATE_ON_PLAYER);
         UpdateWorldState(BG_WS_FLAG_UNK_ALLIANCE, 1);
         Source->CastSpell(Source, BG_WS_SPELL_SILVERWING_FLAG, true);
-        Source->GetAchievementMgr().StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, BG_WS_SPELL_SILVERWING_FLAG_PICKED);
+        Source->StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, BG_WS_SPELL_SILVERWING_FLAG_PICKED);
         if (_flagState[1] == BG_WS_FLAG_STATE_ON_PLAYER)
           _bothFlagsKept = true;
     }
@@ -472,7 +484,7 @@ void BattlegroundWS::EventPlayerClickedOnFlag(Player* Source, GameObject* target
         UpdateFlagState(ALLIANCE, BG_WS_FLAG_STATE_ON_PLAYER);
         UpdateWorldState(BG_WS_FLAG_UNK_HORDE, 1);
         Source->CastSpell(Source, BG_WS_SPELL_WARSONG_FLAG, true);
-        Source->GetAchievementMgr().StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, BG_WS_SPELL_WARSONG_FLAG_PICKED);
+        Source->StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, BG_WS_SPELL_WARSONG_FLAG_PICKED);
         if (_flagState[0] == BG_WS_FLAG_STATE_ON_PLAYER)
           _bothFlagsKept = true;
     }
@@ -595,15 +607,14 @@ void BattlegroundWS::UpdateTeamScore(uint32 team)
         UpdateWorldState(BG_WS_FLAG_CAPTURES_HORDE, GetTeamScore(team));
 }
 
-void BattlegroundWS::HandleAreaTrigger(Player* Source, uint32 Trigger)
+void BattlegroundWS::HandleAreaTrigger(Player* player, uint32 trigger)
 {
-    // this is wrong way to implement these things. On official it done by gameobject spell cast.
     if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
     //uint32 SpellId = 0;
     //uint64 buff_guid = 0;
-    switch (Trigger)
+    switch (trigger)
     {
         case 3686:                                          // Alliance elixir of speed spawn. Trigger not working, because located inside other areatrigger, can be replaced by IsWithinDist(object, dist) in Battleground::Update().
             //buff_guid = BgObjects[BG_WS_OBJECT_SPEEDBUFF_1];
@@ -625,13 +636,13 @@ void BattlegroundWS::HandleAreaTrigger(Player* Source, uint32 Trigger)
             break;
         case 3646:                                          // Alliance Flag spawn
             if (_flagState[BG_TEAM_HORDE] && !_flagState[BG_TEAM_ALLIANCE])
-                if (GetFlagPickerGUID(BG_TEAM_HORDE) == Source->GetGUID())
-                    EventPlayerCapturedFlag(Source);
+                if (GetFlagPickerGUID(BG_TEAM_HORDE) == player->GetGUID())
+                    EventPlayerCapturedFlag(player);
             break;
         case 3647:                                          // Horde Flag spawn
             if (_flagState[BG_TEAM_ALLIANCE] && !_flagState[BG_TEAM_HORDE])
-                if (GetFlagPickerGUID(BG_TEAM_ALLIANCE) == Source->GetGUID())
-                    EventPlayerCapturedFlag(Source);
+                if (GetFlagPickerGUID(BG_TEAM_ALLIANCE) == player->GetGUID())
+                    EventPlayerCapturedFlag(player);
             break;
         case 3649:                                          // unk1
         case 3688:                                          // unk2
@@ -639,8 +650,7 @@ void BattlegroundWS::HandleAreaTrigger(Player* Source, uint32 Trigger)
         case 4629:                                          // unk4
             break;
         default:
-            sLog->outError(LOG_FILTER_BATTLEGROUND, "WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
-            Source->GetSession()->SendAreaTriggerMessage("Warning: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            Battleground::HandleAreaTrigger(player, trigger);
             break;
     }
 
@@ -780,11 +790,11 @@ void BattlegroundWS::UpdatePlayerScore(Player* Source, uint32 type, uint32 value
     {
         case SCORE_FLAG_CAPTURES:                           // flags captured
             ((BattlegroundWGScore*)itr->second)->FlagCaptures += value;
-            Source->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, WS_OBJECTIVE_CAPTURE_FLAG);
+            Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, WS_OBJECTIVE_CAPTURE_FLAG);
             break;
         case SCORE_FLAG_RETURNS:                            // flags returned
             ((BattlegroundWGScore*)itr->second)->FlagReturns += value;
-            Source->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, WS_OBJECTIVE_RETURN_FLAG);
+            Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE, WS_OBJECTIVE_RETURN_FLAG);
             break;
         default:
             Battleground::UpdatePlayerScore(Source, type, value, doAddHonor);
@@ -836,23 +846,17 @@ void BattlegroundWS::FillInitialWorldStates(WorldPacket& data)
 
     data << uint32(BG_WS_FLAG_CAPTURES_MAX) << uint32(BG_WS_MAX_TEAM_SCORE);
 
-    if (GetStatus() == STATUS_IN_PROGRESS)
-    {
-        data << uint32(BG_WS_STATE_TIMER_ACTIVE) << uint32(1);
-        data << uint32(BG_WS_STATE_TIMER) << uint32(25-_minutesElapsed);
-    }
-    else
-        data << uint32(BG_WS_STATE_TIMER_ACTIVE) << uint32(0);
-
     if (_flagState[BG_TEAM_HORDE] == BG_WS_FLAG_STATE_ON_PLAYER)
-        data << uint32(BG_WS_FLAG_STATE_ALLIANCE) << uint32(2);
-    else
-        data << uint32(BG_WS_FLAG_STATE_ALLIANCE) << uint32(1);
-
-    if (_flagState[BG_TEAM_ALLIANCE] == BG_WS_FLAG_STATE_ON_PLAYER)
         data << uint32(BG_WS_FLAG_STATE_HORDE) << uint32(2);
     else
         data << uint32(BG_WS_FLAG_STATE_HORDE) << uint32(1);
 
+    if (_flagState[BG_TEAM_ALLIANCE] == BG_WS_FLAG_STATE_ON_PLAYER)
+        data << uint32(BG_WS_FLAG_STATE_ALLIANCE) << uint32(2);
+    else
+        data << uint32(BG_WS_FLAG_STATE_ALLIANCE) << uint32(1);
+
+    data << uint32(BG_WS_STATE_TIMER_ACTIVE) << uint32(1);
+    data << uint32(BG_WS_STATE_TIMER) << uint32(25 - _minutesElapsed);
 }
 
