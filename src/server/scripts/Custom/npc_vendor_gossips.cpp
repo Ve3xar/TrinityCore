@@ -738,7 +738,13 @@ class npc_glory_vendor : public CreatureScript
                 pCreature->MonsterWhisper("You are in combat!", pPlayer->GetGUID());
                 return true;
             }
-            else if (pPlayer->HasTitle(14) || pPlayer->HasTitle(28))
+            if (pPlayer->GetGlory() < 1000000)
+            {
+                pPlayer->CLOSE_GOSSIP_MENU();
+                pCreature->MonsterWhisper("You need to reach Glory Rank 14 in order to use my services!", pPlayer->GetGUID());
+                return true;
+            }
+            else
             {
                 pPlayer->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, "Vendor", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
                 pPlayer->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, pCreature->GetGUID());

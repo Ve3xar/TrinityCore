@@ -25890,89 +25890,94 @@ void Player::RewardGlory(int amount, int source)
 
 bool Player::CanRankUp()
 {
+    bool rankedUp = false; //Used to check if a player has ranked up
+
     if (_gloryPoints >= GLORY_RANK_1 && (!HasTitle(TITLE_SCOUT) && !HasTitle(TITLE_PRIVATE)))
     {
         RewardGloryRank(1);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_2 && (!HasTitle(TITLE_GRUNT) && !HasTitle(TITLE_CORPORAL)))
     {
         RewardGloryRank(2);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_3 && (!HasTitle(TITLE_SERGEANT_H) && !HasTitle(TITLE_SERGEANT_A)))
     {
         RewardGloryRank(3);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_4 && (!HasTitle(TITLE_SENIOR_SERGEANT) && !HasTitle(TITLE_MASTER_SERGEANT)))
     {
         RewardGloryRank(4);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_5 && (!HasTitle(TITLE_FIRST_SERGEANT) && !HasTitle(TITLE_SERGEANT_MAJOR)))
     {
         RewardGloryRank(5);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_6 && (!HasTitle(TITLE_STONE_GUARD) && !HasTitle(TITLE_KNIGHT)))
     {
         RewardGloryRank(6);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_7 && (!HasTitle(TITLE_BLOOD_GUARD) && !HasTitle(TITLE_KNIGHT_LIEUTENANT)))
     {
         RewardGloryRank(7);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_8 && (!HasTitle(TITLE_LEGIONNAIRE) && !HasTitle(TITLE_KNIGHT_CAPTAIN)))
     {
         RewardGloryRank(8);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_9 && (!HasTitle(TITLE_CENTURION) && !HasTitle(TITLE_KNIGHT_CHAMPION)))
     {
         RewardGloryRank(9);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_10 && (!HasTitle(TITLE_CHAMPION) && !HasTitle(TITLE_LIEUTENANT_COMMANDER)))
     {
         RewardGloryRank(10);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_11 && (!HasTitle(TITLE_LIEUTENANT_GENERAL) && !HasTitle(TITLE_COMMANDER)))
     {
         RewardGloryRank(11);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_12 && (!HasTitle(TITLE_GENERAL) && !HasTitle(TITLE_MARSHAL)))
     {
         RewardGloryRank(12);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_13 && (!HasTitle(TITLE_WARLORD) && !HasTitle(TITLE_FIELD_MARSHAL)))
     {
         RewardGloryRank(13);
-        return true;
+        rankedUp = true;
     }
 
     if (_gloryPoints >= GLORY_RANK_14 && (!HasTitle(TITLE_HIGH_WARLORD) && !HasTitle(TITLE_GRAND_MARSHAL)))
     {
         RewardGloryRank(14);
-        return true;
+        rankedUp = true;
     }
+
+    if (rankedUp)
+        return true;
 
     return false;
 }

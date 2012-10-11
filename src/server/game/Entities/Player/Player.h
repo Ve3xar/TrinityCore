@@ -2640,6 +2640,7 @@ class Player : public Unit, public GridObject<Player>
         void CheckGloryRewards();
         bool CanRankUp();
         void RewardGloryRank(int rank);
+        uint32 GetGlory() {return _gloryPoints;}
         
 
     protected:
