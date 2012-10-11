@@ -21,6 +21,7 @@
 
 #include "Define.h"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <list>
@@ -30,7 +31,7 @@ template<typename T, class S> struct Finder
 {
     T val_;
     T S::* idMember_;
- 
+
     Finder(T val, T S::* idMember) : val_(val), idMember_(idMember) {}
     bool operator()(const std::pair<int, S> &obj) { return obj.second.*idMember_ == val_; }
 };

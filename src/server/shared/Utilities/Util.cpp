@@ -16,8 +16,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <iostream>
 #include "Util.h"
+#include "Common.h"
 #include "utf8.h"
 #include "SFMT.h"
 #include <ace/TSS_T.h>
@@ -28,16 +28,19 @@ static SFMTRandTSS sfmtRand;
 
 int32 irand(int32 min, int32 max)
 {
+    assert(max >= min);
     return int32(sfmtRand->IRandom(min, max));
 }
 
 uint32 urand(uint32 min, uint32 max)
 {
+    assert(max >= min);
     return sfmtRand->URandom(min, max);
 }
 
 float frand(float min, float max)
 {
+    assert(max >= min);
     return float(sfmtRand->Random() * (max - min) + min);
 }
 
@@ -488,7 +491,7 @@ std::string ByteArrayToHexStr(uint8 const* bytes, uint32 arrayLen, bool reverse 
     for (int32 i = init; i != end; i += op)
     {
         char buffer[4];
-        sprintf(buffer, "%02X ", bytes[i]);
+        sprintf(buffer, "%02X", bytes[i]);
         ss << buffer;
     }
 
